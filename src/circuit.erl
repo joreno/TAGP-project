@@ -1,5 +1,5 @@
 -module(circuit).
--export([createSimpleCircuit/0, createNPipes/1, createPipes/3, connectPipes/1, stop/0, getConnectors/1, createCircuit/0, createCircuitWithPump/0, createCircuitWithPumpAndFlowmeter/0]).
+-export([createSimpleCircuit/0, createNPipes/1, createPipes/3, connectPipes/1, stop/0, getConnectors/1, createCircuit/0, createCircuitWithPump/0, createCircuitWithPumpAndFlowmeter/0, createFullCircuit/0]).
 
 %%%%%Circuits%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 createSimpleCircuit() ->
@@ -100,15 +100,13 @@ createCircuitWithPumpAndFlowmeter() ->
 	connector:connect(A2, B1),
 	connector:connect(B2, C1),
 
-	%pump	
-	{ok, PumpType} = pumpTyp:create(),
-	{ok, PumpInst} = pumpInst:create(self(), PumpType, PipeAInstPid, fun(on) -> {ok, on}; (off) -> {ok, off} end),
-
-
-
 	Pipes = [PipeAInstPid,PipeBInstPid,PipeCInstPid],
 	Cons = getConnectors(Pipes),
 	Locs = getLocations(Pipes),
+
+	%pump	
+	{ok, PumpType} = pumpTyp:create(),
+	{ok, PumpInst} = pumpInst:create(self(), PumpType, PipeAInstPid, fun(on) -> {ok, on}; (off) -> {ok, off} end),
 			 
 	%fluid
 	FluidumType = fluidumTyp:create(),
@@ -121,7 +119,42 @@ createCircuitWithPumpAndFlowmeter() ->
 
 	{ok, {PipeTypePid, Pipes, Cons, Locs, FluidumType, FluidumInst, PumpType, PumpInst, FlowmeterType, FlowmeterInst}}.
 	
+createFullCircuit() ->
+	% Creates a circuit with 3 pipes, a pump, a flowmeter, a heatexchanger and a fluid	
+	survivor:start(),	
+	%pipes	
+	{ok, PipeTypePid} = resource_type:create(pipeTyp, []),		
+	{ok, PipeAInstPid} = resource_instance:create(pipeInst, [self(), PipeTypePid]),
+	{ok, PipeBInstPid} = resource_instance:create(pipeInst, [self(), PipeTypePid]),
+	{ok, PipeCInstPid} = resource_instance:create(pipeInst, [self(), PipeTypePid]),
+	{ok, [A1, A2]} = resource_instance:list_connectors(PipeAInstPid),
+	{ok, [B1, B2]} = resource_instance:list_connectors(PipeBInstPid),
+	{ok, [C1, C2]} = resource_instance:list_connectors(PipeCInstPid),
+	connector:connect(A1, C2),
+	connector:connect(A2, B1),
+	connector:connect(B2, C1),
+
+	Pipes = [PipeAInstPid,PipeBInstPid,PipeCInstPid],
+	Cons = getConnectors(Pipes),
+	Locs = getLocations(Pipes),
 	
+	%pump	
+	{ok, PumpType} = pumpTyp:create(),
+	{ok, PumpInst} = pumpInst:create(self(), PumpType, PipeAInstPid, fun(on) -> {ok, on}; (off) -> {ok, off} end),
+			 
+	%fluid
+	FluidumType = fluidumTyp:create(),
+	{ok, FluidumInst} = fluidumInst:create(A1, FluidumType),
+	
+	%flowmeter
+	{ok, FlowmeterType} = flowMeterTyp:create(),
+	Fm = fun() ->	{ok, real_flow} end,
+	{ok, FlowmeterInst} = flowMeterInst:create(self(), FlowmeterType, PipeBInstPid, Fm),
+	
+	%heatexchanger
+	{ok, HEType} = heatExchangerTyp:create(),
+	{ok, HEInst} = heatExchangerInst:create(self(), HEType,PipeCInstPid, #{delta => 1}),
+	{ok, {PipeTypePid, Pipes, Cons, Locs, FluidumType, FluidumInst, PumpType, PumpInst, FlowmeterType, FlowmeterInst, HEType, HEInst}}.
 	
 
 %%%%%Other Functions%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

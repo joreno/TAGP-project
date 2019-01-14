@@ -57,6 +57,25 @@ createCircuitWithPumpAndFlowmeter_test_() ->
 	}.
 
 
+createFullCircuit_test_() ->
+	{"checks if a circuit with 3 pipes, a pump, a flowmeter, a heat exchanger and water is created",
+		{setup, 
+		fun return_createFullCircuit/0, 
+		fun stop/1, 
+		fun({PipeType, Pipes, Cons, Locs, FluidumType, FluidumInst, PumpType, PumpInst, FlowmeterType, FlowmeterInst, HEType, HEInst}) -> 
+			[
+			%previous tests
+			checkCircuitWithPump({PipeType, Pipes, Cons, Locs, FluidumType, FluidumInst, PumpType, PumpInst}),
+			checkPumpFunctions({PipeType, Pipes, Cons, Locs, FluidumType, FluidumInst, PumpType, PumpInst}),
+			checkPumpFlow({PipeType, Pipes, Cons, Locs, FluidumType, FluidumInst, PumpType, PumpInst}),
+			checkFlowmeter({PipeType, Pipes, Cons, Locs, FluidumType, FluidumInst, PumpType, PumpInst, FlowmeterType, FlowmeterInst}),
+			%new test
+			checkHE({PipeType, Pipes, Cons, Locs, FluidumType, FluidumInst, PumpType, PumpInst, FlowmeterType, FlowmeterInst, HEType, HEInst})
+			]
+		end
+		}
+	}.
+
 %%%%%setup%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 stop(_) ->
 	circuit:stop().
@@ -82,6 +101,10 @@ return_createCircuitWithPump() ->
 return_createCircuitWithPumpAndFlowmeter() ->
 	{ok, {PipeType, Pipes, Cons, Locs, FluidumType, FluidumInst, PumpType, PumpInst, FlowmeterType, FlowmeterInst}} = circuit:createCircuitWithPumpAndFlowmeter(),
 	{PipeType, Pipes, Cons, Locs, FluidumType, FluidumInst, PumpType, PumpInst, FlowmeterType, FlowmeterInst}.
+	
+return_createFullCircuit() ->
+	{ok, {PipeType, Pipes, Cons, Locs, FluidumType, FluidumInst, PumpType, PumpInst, FlowmeterType, FlowmeterInst, HEType, HEInst}} = circuit:createFullCircuit(),
+	{PipeType, Pipes, Cons, Locs, FluidumType, FluidumInst, PumpType, PumpInst, FlowmeterType, FlowmeterInst, HEType, HEInst}.
 	
 
 %%%%%Tests%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -254,15 +277,17 @@ checkFlowmeter({_,Pipes,_,_,_,_,_,_, FlowmeterType, FlowmeterInst}) ->
 	TestB = ?_assertEqual(B,{ok, real_flow}),
 	[TestA, TestB].	
 
-%	{ok, C} = flowMeterInst:estimate_flow(FlowmeterInst),
-%	{ok, RefA} = apply(resource_instance, get_flow_influence, [PipeA]),
-%	{ok, RefB} = apply(resource_instance, get_flow_influence, [PipeB]),
-%	{ok, RefC} = apply(resource_instance, get_flow_influence, [PipeC]),
-%	Refs = [RefA, RefB, RefC],
-%	Ref = compute({0,10}, Refs),
-%	TestC = ?_assertEqual(C, Ref),
-%	[TestA, TestB, TestC].
+checkHE({_,_,_,_,_,_,_,_,_,_, HEType, HEInst})->
+	TestA = [
+		?_assert(erlang:is_process_alive(HEType)),
+		?_assert(erlang:is_process_alive(HEInst))
+		],
 
+	{ok, {ok, Inf}} = heatExchangerInst:temp_influence(HEInst),
+	{ok, B} = Inf(5, 20),
+	TestB = ?_assertEqual(B, 20 + (1/5)),
+
+	[TestA, TestB].
 
 %%%%%Other Functions%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 compute({Low, High}, _InflFnCircuit) when (High - Low) < 1 -> 
