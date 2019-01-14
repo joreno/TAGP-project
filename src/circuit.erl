@@ -2,8 +2,8 @@
 -export([startCircuit/0, createNPipes/1, createPipes/3, connectPipes/1, stop/0, getConnectors/1]).
 
 startCircuit() ->
-	%survivor:start(),
-	%observer:start(),
+	survivor:start(),
+	observer:start(),
 	{ok, PipeTypePid} = resource_type:create(pipeTyp, []),		
 	{ok, PipeAInstPid} = resource_instance:create(pipeInst, [self(), PipeTypePid]),
 	{ok, PipeBInstPid} = resource_instance:create(pipeInst, [self(), PipeTypePid]),
@@ -27,8 +27,8 @@ startCircuit() ->
 	}.	
 
 createNPipes(N) ->
-	%survivor:start(),
-	%observer:start(),
+	survivor:start(),
+	observer:start(),
 	{ok, PipeTypePid} = resource_type:create(pipeTyp,[]),
 	Pipes = createPipes(N,[],PipeTypePid),
 	connectPipes(Pipes),

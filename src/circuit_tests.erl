@@ -1,6 +1,7 @@
 -module(circuit_tests).
 -include_lib("eunit/include/eunit.hrl").
 
+%only one test at a time will work, to run: put either startCircuit_test_() or createNPipes_test_() in comments%
 startCircuit_test_() ->
 	{"start the circuit", {foreach, fun return_startCircuit/0, fun stop/1, [fun checkPipes/1]}}.
 
