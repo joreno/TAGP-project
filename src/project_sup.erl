@@ -32,7 +32,7 @@ start_link() ->
 %% Child :: {Id,StartFunc,Restart,Shutdown,Type,Modules}
 init([]) ->
 	%survivor:start(),
-	%observer:start(),
+	observer:start(),
 	%circuit:createNPipes(5),
 	eunit:test(circuit). 	
 	{ok, {{one_for_all, 0, 1}, []}}.
