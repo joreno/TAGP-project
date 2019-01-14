@@ -40,6 +40,23 @@ createCircuitWithPump_test_() ->
 		}
 	}.
 
+createCircuitWithPumpAndFlowmeter_test_() ->
+	{"checks if a circuit with 3 pipes, a pump, a flowmeter and water is created",
+		{setup, 
+		fun return_createCircuitWithPumpAndFlowmeter/0, 
+		fun stop/1, 
+		fun({PipeType, Pipes, Cons, Locs, FluidumType, FluidumInst, PumpType, PumpInst, FlowmeterType, FlowmeterInst}) -> 
+			[
+			checkCircuitWithPump({PipeType, Pipes, Cons, Locs, FluidumType, FluidumInst, PumpType, PumpInst}),
+			checkPumpFunctions({PipeType, Pipes, Cons, Locs, FluidumType, FluidumInst, PumpType, PumpInst}),
+			checkPumpFlow({PipeType, Pipes, Cons, Locs, FluidumType, FluidumInst, PumpType, PumpInst}),
+			checkFlowmeter({PipeType, Pipes, Cons, Locs, FluidumType, FluidumInst, PumpType, PumpInst, FlowmeterType, FlowmeterInst})
+			]
+		end
+		}
+	}.
+
+
 %%%%%setup%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 stop(_) ->
 	circuit:stop().
@@ -62,6 +79,10 @@ return_createCircuitWithPump() ->
 	{ok, {PipeType, Pipes, Cons, Locs, FluidumType, FluidumInst, PumpType, PumpInst}} = circuit:createCircuitWithPump(),
 	{PipeType, Pipes, Cons, Locs, FluidumType, FluidumInst, PumpType, PumpInst}.
 
+return_createCircuitWithPumpAndFlowmeter() ->
+	{ok, {PipeType, Pipes, Cons, Locs, FluidumType, FluidumInst, PumpType, PumpInst, FlowmeterType, FlowmeterInst}} = circuit:createCircuitWithPumpAndFlowmeter(),
+	{PipeType, Pipes, Cons, Locs, FluidumType, FluidumInst, PumpType, PumpInst, FlowmeterType, FlowmeterInst}.
+	
 
 %%%%%Tests%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 checkSimpleCircuit({PipeTypePid, Pipes, Cons, Locs}) ->
@@ -218,3 +239,48 @@ checkPumpFlow({_,_,_,_,_,_, PumpType, PumpInst}) ->
 	
 	[TestA, TestB, TestC, TestD].
 
+
+checkFlowmeter({_,Pipes,_,_,_,_,_,_, FlowmeterType, FlowmeterInst}) ->
+%	[PipeA, PipeB, PipeC] = Pipes,
+	
+	TestA = 
+		[
+		?_assert(erlang:is_process_alive(FlowmeterType)),	
+		?_assert(erlang:is_process_alive(FlowmeterInst))
+		],
+	
+	%check if the measured flow is equal to {ok, real_flow}
+	{ok, B} = flowMeterInst:measure_flow(FlowmeterInst),
+	TestB = ?_assertEqual(B,{ok, real_flow}),
+	[TestA, TestB].	
+
+%	{ok, C} = flowMeterInst:estimate_flow(FlowmeterInst),
+%	{ok, RefA} = apply(resource_instance, get_flow_influence, [PipeA]),
+%	{ok, RefB} = apply(resource_instance, get_flow_influence, [PipeB]),
+%	{ok, RefC} = apply(resource_instance, get_flow_influence, [PipeC]),
+%	Refs = [RefA, RefB, RefC],
+%	Ref = compute({0,10}, Refs),
+%	TestC = ?_assertEqual(C, Ref),
+%	[TestA, TestB, TestC].
+
+
+%%%%%Other Functions%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+compute({Low, High}, _InflFnCircuit) when (High - Low) < 1 -> 
+	(Low + High) / 2 ;
+	
+compute({Low, High}, InflFnCircuit) ->
+	L = eval(Low, InflFnCircuit, 0),
+	H = eval(High, InflFnCircuit, 0),
+	L = eval(Low, InflFnCircuit, 0),
+	H = eval(High, InflFnCircuit, 0),
+	Mid = (H + L) / 2, M = eval(Mid, InflFnCircuit, 0),
+	if 	M > 0 -> 
+			compute({Low, Mid}, InflFnCircuit);
+        true -> 
+            compute({Mid, High}, InflFnCircuit)
+    end.
+
+eval(Flow, [Fn | RemFn] , Acc) ->
+	eval(Flow, RemFn, Acc + Fn(Flow));
+
+eval(_Flow, [], Acc) -> Acc. 

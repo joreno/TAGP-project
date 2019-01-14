@@ -1,6 +1,7 @@
 -module(circuit).
--export([createSimpleCircuit/0, createNPipes/1, createPipes/3, connectPipes/1, stop/0, getConnectors/1, createCircuit/0, createCircuitWithPump/0]).
+-export([createSimpleCircuit/0, createNPipes/1, createPipes/3, connectPipes/1, stop/0, getConnectors/1, createCircuit/0, createCircuitWithPump/0, createCircuitWithPumpAndFlowmeter/0]).
 
+%%%%%Circuits%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 createSimpleCircuit() ->
 	%creates a simple circuit with 3 pipes
 	survivor:start(),
@@ -84,7 +85,46 @@ createCircuitWithPump() ->
 
 	{ok, {PipeTypePid, Pipes, Cons, Locs, FluidumType, FluidumInst, PumpType, PumpInst}}.
 	
+createCircuitWithPumpAndFlowmeter() ->
+	%creates a circuit with 3 pipes, a pump, a flowmeter and fluid
+	survivor:start(),	
+	%pipes	
+	{ok, PipeTypePid} = resource_type:create(pipeTyp, []),		
+	{ok, PipeAInstPid} = resource_instance:create(pipeInst, [self(), PipeTypePid]),
+	{ok, PipeBInstPid} = resource_instance:create(pipeInst, [self(), PipeTypePid]),
+	{ok, PipeCInstPid} = resource_instance:create(pipeInst, [self(), PipeTypePid]),
+	{ok, [A1, A2]} = resource_instance:list_connectors(PipeAInstPid),
+	{ok, [B1, B2]} = resource_instance:list_connectors(PipeBInstPid),
+	{ok, [C1, C2]} = resource_instance:list_connectors(PipeCInstPid),
+	connector:connect(A1, C2),
+	connector:connect(A2, B1),
+	connector:connect(B2, C1),
+
+	%pump	
+	{ok, PumpType} = pumpTyp:create(),
+	{ok, PumpInst} = pumpInst:create(self(), PumpType, PipeAInstPid, fun(on) -> {ok, on}; (off) -> {ok, off} end),
+
+
+
+	Pipes = [PipeAInstPid,PipeBInstPid,PipeCInstPid],
+	Cons = getConnectors(Pipes),
+	Locs = getLocations(Pipes),
+			 
+	%fluid
+	FluidumType = fluidumTyp:create(),
+	{ok, FluidumInst} = fluidumInst:create(A1, FluidumType),
 	
+	%flowmeter
+	{ok, FlowmeterType} = flowMeterTyp:create(),
+	Fm = fun() ->	{ok, real_flow} end,
+	{ok, FlowmeterInst} = flowMeterInst:create(self(), FlowmeterType, PipeBInstPid, Fm),
+
+	{ok, {PipeTypePid, Pipes, Cons, Locs, FluidumType, FluidumInst, PumpType, PumpInst, FlowmeterType, FlowmeterInst}}.
+	
+	
+	
+
+%%%%%Other Functions%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 createPipes(1, PipeList, PipeTypePid) ->
 	{ok, PipeInstPid} = resource_instance:create(pipeInst, [self(), PipeTypePid]),
 	[PipeInstPid | PipeList];
