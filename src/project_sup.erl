@@ -31,10 +31,8 @@ start_link() ->
 %% Before OTP 18 tuples must be used to specify a child. e.g.
 %% Child :: {Id,StartFunc,Restart,Shutdown,Type,Modules}
 init([]) ->
-	%survivor:start(),
-	observer:start(),
-	%circuit:createNPipes(5),
-	eunit:test(circuit). 	
+	circuit:startSurvivor(),
+	circuit:createComplexCircuit(7,2,3,1),	
 	{ok, {{one_for_all, 0, 1}, []}}.
 
 %%====================================================================

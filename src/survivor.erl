@@ -2,6 +2,7 @@
 -export([start/0, entry/1, init/0]). 
 
 start() ->
+	(whereis(survivor) =:= undefined) orelse unregister(survivor), 
 	register(survivor, spawn(?MODULE, init, [])).
 
 entry(Data)-> 
@@ -15,5 +16,4 @@ init() ->
 loop() -> 
 	receive
 		stop -> ok
-	end. 
-
+end. 
