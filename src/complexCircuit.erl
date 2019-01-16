@@ -6,37 +6,49 @@
 createComplexCircuit(A,B,C) ->
 	% creates a circuit with A pipes, B pumps, a flowmeter, C heatexchangers and a fluid
 	% A has to be bigger than B+C+1, otherwise some of the other instances can't be placed
-	if A > B+C+1 ->
-		%first create A pipes:	
+	if A >= B+C+1 ->
+		%first create A pipes:
+		io:format("Creating ~p pipes~n", [A]),	
 		{ok, PipeType} = resource_type:create(pipeTyp,[]),
 		Pipes = createPipes(A, [], PipeType),
+		io:format("~p pipes are created, connecting them together now~n", [A]),	
 		connectPipes(Pipes),
 		Cons = getConnectors(Pipes),
 		Locs = getLocations(Pipes),
+		io:format("Connections are made, filling the pipes with water~n"),	
 		
 		%next add the fluid:
 		FluidumType = fluidumTyp:create(),
 		[ConA|_] = Cons,
 		{ok, Fluidum} = fluidumInst:create(ConA, FluidumType),
 		fillCircuit(Fluidum, Locs),
+		io:format("Circuit has been filled with water~n"),
 
 		%create B pumps:
+		io:format("Adding ~p pumps to the circuit~n", [B]),
 		{ok, PumpType} = pumpTyp:create(),
 		{ok, {Pumps, AvPipes}} = createPumps(B, [], PumpType, Pipes), 
-		
-		%create a flowmeter:
+		io:format("~p pumps have been added to the circuit~n", [B]),
+
+		%create a flowmeter:		
+		io:format("Adding a flowmeter to the circuit~n"),	
 		{ok, FMType} = flowMeterTyp:create(),
 		[Pipe|AvPipes2] = AvPipes,
 		{ok, FM} = flowMeterInst:create(self(), FMType, Pipe, fun() -> {ok, real_flow} end), 
-
-		%create C Heatexchangers: 
+		io:format("Flowmeter has been added to the circuit~n"),
+		
+		%create C Heatexchangers:		
+		io:format("Adding ~p heatexchangers to the circuit~n", [C]), 
 		{ok, HEType} = heatExchangerTyp:create(),
 		{ok, HEs} = createHEs(C, [], HEType, AvPipes2),
-		
+		io:format("~p heatexchangers have been added to the circuit~n", [B]),		
+	
 		%return everything:
+		io:format("Circuit has been created:~nPipes are: ~p~nConnections between these pipes are ~p~nThe pipes are located in ~p~nThe fluidum is: ~p~nThe pumps are: ~p~nThe flowmeter is: ~p~nThe heatexchangers are: ~p~n", [Pipes, Cons, Locs, Fluidum, Pumps, FM, HEs]),
 		Types = [PipeType, FluidumType, PumpType, FMType, HEType],
 		{ok,{Types, Pipes, Cons, Locs, Fluidum, Pumps, FM, HEs}};
 	true ->
+		io:format("There is not enough space to place all these components! You will need ~p more pipes~n", [(B+C+1)-A]),
 		{error, "Not enough Pipes!!!"}
 	end.
 

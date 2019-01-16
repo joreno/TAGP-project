@@ -32,7 +32,7 @@ start_link() ->
 %% Child :: {Id,StartFunc,Restart,Shutdown,Type,Modules}
 init([]) ->
 	complexCircuit:startSurvivor(),
-	complexCircuit:createComplexCircuit(7,2,1),	
+	complexCircuit:createComplexCircuit(7,4,2),	
 	{ok, {{one_for_all, 0, 1}, []}}.
 
 %%====================================================================
